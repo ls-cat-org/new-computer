@@ -19,9 +19,9 @@ For the operating system version you have installed on your machine, please use 
 appropriate install.sh script in the corresponding subdir of this repository. For example,
 the install script for Ubuntu Server 24.04 is located under "ubuntu-server/24.04".
 To use it, the commands are:
-
-  cd ubuntu-server/24.04
-  
-  ./install.sh
-
+   
+    cd ubuntu-server/24.04
+    
+    ./install.sh
+    
 Please follow the on-screen instructions of the install script to complete the installation.
