@@ -20,7 +20,8 @@ appropriate install.sh script in the corresponding subdir of this repository. Fo
 the install script for Ubuntu Server 24.04 is located under "ubuntu-server/24.04".
 To use it, the commands are:
 
-cd ubuntu-server/24.04
-./install.sh
+  cd ubuntu-server/24.04
+  
+  ./install.sh
 
 Please follow the on-screen instructions of the install script to complete the installation.
