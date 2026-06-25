@@ -9,19 +9,28 @@ umount /lustre2 >/dev/null 2>&1
 umount /lustre1 >/dev/null 2>&1
 umount /lustre0 >/dev/null 2>&1
 
-set -uex
-mv -f /etc/sudoers /etc/sudoers.default
-cp -f etc/sudoers /etc/sudoers
-chmod 0440 /etc/sudoers
+set -ue
+cfg_install() {
+    src=$1 # the relative path under git repo
+    dst=/$1
+    prev=/$1.default
+    permissions=$2
+    if [ -f $src ]; then
+	cp -n $dst $prev
+	cp -f $src $dst
+	chmod $permissions $dst
+    fi
+    echo "$dst updated (vanilla OS installation file located at $prev)"
+}
 
-mkdir -m 0644 -p /etc/pam.d.default
-cp -f /etc/pam.d/* /etc/pam.d.default
-
-mv -f etc/pam.d/common-auth /etc/pam.d/common-auth
-mv -f etc/pam.d/common-account /etc/pam.d/common-account
-mv -f etc/pam.d/common-session /etc/pam.d/common-session
+cfg_install etc/sssd/sssd.conf 0600
+cfg_install etc/sudoers 0440
+cfg_install etc/pam.d/common-auth 0644
+cfg_install etc/pam.d/common-account 0644
+cfg_install etc/pam.d/common-session 0644
 
 # Append to fstab special LS-CAT shared filesystems.
+[ -f /etc/fstab.default ] || cp -f /etc/fstab /etc/fstab.default
 cat <<EOF >> /etc/fstab
 
 # Mount our NFS directory for general-purpose shared data where
@@ -30,23 +39,24 @@ cat <<EOF >> /etc/fstab
 # EPICS scripts.
 ldap1.ls-cat.net:/pf /pf nfs defaults,_netdev,nofail,noatime,ro
 
-# Mount our two lustre filesystems where image datasets reside.
+# Mount our two lustre filesystems.
 #
-# lustre0 is our ancient lustre filesystem (formerly known as /oe)
+# lustre2 is our test environment lustre filesystem.
 #
-# lustre1 is our old lustre filesystem where data produced by lsnode
-#   most recently went (formerly known as /pf.
+# lustre1 is our latest and greatest production env lustre filesystem.
 #
+# (DISABLED)
+# lustre0 is our old lustre filesystem where data produced by lsnode
+#   goes (formerly known as /pf). It is read-only for machines outside
+#   the legacy lsnode ecosystem. You may uncomment the corresponding
+#   fstab line for any machine involved in legacy data migration.
 #
-# lustre2 is our latest and greatest lustre filesystem where datasets
-#   produced by mxcube3 collection reside.
-10.1.0.11@tcp:/adfs /lustre2 lustre defaults,nofail,flock,_netdev,x-systemd.requires=lnet.service 0 0
-10.1.0.13@tcp:/bdfs /lustre1 lustre defaults,nofail,flock,_netdev,x-systemd.requires=lnet.service 0 0
-10.1.252.229@tcp:/sffs /lustre0 lustre defaults,nofail,flock,_netdev,x-systemd.requires=lnet.service 0 0
+10.1.0.13@tcp:/bdfs /lustre2 lustre rw,noatime,checksum,flock,nouser_xattr,lruresize,lazystatfs,nouser_fid2path,verbose,encrypt,statfs_project,nofail,_netdev,x-systemd.requires=lnet.service 0 0
+10.1.0.11@tcp:/adfs /lustre1 lustre rw,noatime,checksum,flock,nouser_xattr,lruresize,lazystatfs,nouser_fid2path,verbose,encrypt,statfs_project,nofail,_netdev,x-systemd.requires=lnet.service 0 0
+#10.1.252.229@tcp:/sffs /lustre0 lustre ro,noatime,checksum,flock,nouser_xattr,lruresize,lazystatfs,nouser_fid2path,verbose,noencrypt,nofail,_netdev,x-systemd.requires=lnet.service 0 0
 
 EOF
 
-set +x
 echo
 echo "Finished installing config files for LDAP-based user authentication."
 echo "Please run the following commands in order to allow this updated configuration to take effect:"
@@ -54,4 +64,11 @@ echo
 echo "  systemctl disable --now nslcd"
 echo "  systemctl restart sssd"
 echo "  sss_cache -E"
+echo
+echo "Once you have done that, please update /etc/ssh/sshd_config to listen only on localhost and" \
+     "internal network addresses and then run the following commands to ensure that sshd honors" \
+     "our config file:"
+echo
+echo "  systemctl disable --now ssh.sock && systemctl enable --now ssh.service"
+echo "  systemctl restart ssh"
 echo
