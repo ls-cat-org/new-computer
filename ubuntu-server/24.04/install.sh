@@ -4,40 +4,56 @@ if [ $UID -ne 0 ]; then
     exit 1
 fi
 
-umount /pf >/dev/null 2>&1
+umount /pf      >/dev/null 2>&1
 umount /lustre2 >/dev/null 2>&1
 umount /lustre1 >/dev/null 2>&1
 umount /lustre0 >/dev/null 2>&1
+umount /opt/dm  >/dev/null 2>&1
+umount /dmOpt   >/dev/null 2>&1
 
 set -ue
 cfg_install() {
     src=$1 # the relative path under git repo
     dst=/$1
-    prev=/$1.default
+    og=/$1.default
     permissions=$2
     if [ -f $src ]; then
-	cp -n $dst $prev
+	cp -n $dst $og
 	cp -f $src $dst
 	chmod $permissions $dst
     fi
-    echo "$dst updated (vanilla OS installation file located at $prev)"
+    echo "$dst updated (vanilla OS installation file located at $og)"
 }
-
-cfg_install etc/sssd/sssd.conf 0600
-cfg_install etc/sudoers 0440
-cfg_install etc/pam.d/common-auth 0644
+cfg_install etc/sssd/sssd.conf       0600
+cfg_install etc/sudoers              0440
+cfg_install etc/pam.d/common-auth    0644
 cfg_install etc/pam.d/common-account 0644
 cfg_install etc/pam.d/common-session 0644
 
-# Append to fstab special LS-CAT shared filesystems.
-[ -f /etc/fstab.default ] || cp -f /etc/fstab /etc/fstab.default
+# Mount special LS-CAT and APS shared filesystems, update fstab if successful.
+LSCAT_NFS_OPTS='defaults,_netdev,nofail,noatime'
+LSCAT_LUSTRE_OPTS='noatime,checksum,flock,acl,lruresize,lazystatfs,nouser_fid2path,verbose,encrypt,statfs_project,_netdev,x-systemd.requires=lnet.service'
+DM_NFS_OPTS='relatime,vers=4.2,namlen=255,rsize=524288,wsize=524288,hard,fatal_neterrors=none,proto=tcp,timeo=600,retrans=2,sec=sys,local_lock=none'
+
+mkdir -p    /pf /lustre0 /lustre1 /lustre2 /opt/dm /dmOpt
+chmod 1777  /pf /lustre0 /lustre1 /lustre2 /opt/dm /dmOpt
+mount -t nfs -o ${LSCAT_NFS_OPTS},rw ldap1.ls-cat.net:/pf /pf
+
+mount -t lustre -o ${LUSTRE_OPTS},rw 10.1.0.13@tcp:/bdfs /lustre2
+mount -t lustre -o ${LUSTRE_OPTS},rw 10.1.0.11@tcp:/adfs /lustre1
+mount -t lustre -o ${LUSTRE_OPTS},ro 10.1.252.229@tcp:/sffs /lustre0
+
+mount -t nfs4 -o ${DM_NFS_OPTS},ro s21dserv.ls.aps.anl.gov:/export/dm  /opt/dm
+mount -t nfs4 -o ${DM_NFS_OPTS},ro catfiles.xray.aps.anl.gov:/dmOpt    /dmOpt
+
+cp -n /etc/fstab /etc/fstab.default
 cat <<EOF >> /etc/fstab
 
 # Mount our NFS directory for general-purpose shared data where
 # home dirs also reside. The obtuse name "/pf" was chosen to
 # retain backward compatibility with long-standing hardcoded
 # EPICS scripts.
-ldap1.ls-cat.net:/pf /pf nfs defaults,_netdev,nofail,noatime,ro
+ldap1.ls-cat.net:/pf /pf nfs ${LSCAT_NFS_OPTS},rw 0 0
 
 # Mount our two lustre filesystems.
 #
@@ -45,15 +61,21 @@ ldap1.ls-cat.net:/pf /pf nfs defaults,_netdev,nofail,noatime,ro
 #
 # lustre1 is our latest and greatest production env lustre filesystem.
 #
-# (DISABLED)
 # lustre0 is our old lustre filesystem where data produced by lsnode
 #   goes (formerly known as /pf). It is read-only for machines outside
-#   the legacy lsnode ecosystem. You may uncomment the corresponding
-#   fstab line for any machine involved in legacy data migration.
+#   the legacy lsnode ecosystem.
 #
-10.1.0.13@tcp:/bdfs /lustre2 lustre rw,noatime,checksum,flock,nouser_xattr,lruresize,lazystatfs,nouser_fid2path,verbose,encrypt,statfs_project,nofail,_netdev,x-systemd.requires=lnet.service 0 0
-10.1.0.11@tcp:/adfs /lustre1 lustre rw,noatime,checksum,flock,nouser_xattr,lruresize,lazystatfs,nouser_fid2path,verbose,encrypt,statfs_project,nofail,_netdev,x-systemd.requires=lnet.service 0 0
-#10.1.252.229@tcp:/sffs /lustre0 lustre ro,noatime,checksum,flock,nouser_xattr,lruresize,lazystatfs,nouser_fid2path,verbose,noencrypt,nofail,_netdev,x-systemd.requires=lnet.service 0 0
+10.1.0.13@tcp:/bdfs /lustre2 lustre    ${LSCAT_LUSTRE_OPTS},rw 0 0
+10.1.0.11@tcp:/adfs /lustre1 lustre    ${LSCAT_LUSTRE_OPTS},rw 0 0
+10.1.252.229@tcp:/sffs /lustre0 lustre ${LSCAT_LUSTRE_OPTS},ro 0 0
+
+#
+# Mount the directories where APS "Data Management" utilities are located.
+# The manual overrides for rsize and wsize were recommended by the APS
+# from their own documentation on DM.
+#
+s21dserv.ls.aps.anl.gov:/export/dm /opt/dm nfs4  ${DM_NFS_OPTS},ro 0 0
+catfiles.xray.aps.anl.gov:/dmOpt   /dmOpt  nfs4  ${DM_NFS_OPTS},ro 0 0
 
 EOF
 
