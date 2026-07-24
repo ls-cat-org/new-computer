@@ -13,14 +13,26 @@ umount /dmOpt   >/dev/null 2>&1
 
 set -ue
 cfg_install() {
+    if [ $# -ne 2 ]; then
+	echo "usage: cfg_install <file_relpath> <permissions>" >&2
+	return 1
+    elif [ -z "$1" ]; then
+	echo "ERROR: filepath arg is emptystring" >&2
+	return 1
+    elif [ -z "$2" ]; then
+	echo "ERROR: permissions arg is emptystring" >&2
+	return 1
+    fi
     src=$1 # the relative path under git repo
     dst=/$1
     og=/$1.default
     permissions=$2
-    if [ -f $src ]; then
-	cp -n $dst $og
-	cp -f $src $dst
-	chmod $permissions $dst
+    if [ -f "$src" ]; then
+	if [ -f "$dst" ]; then
+	    cp -n "$dst" "$og"
+	fi
+	cp -f "$src" "$dst"
+	chmod "$permissions" "$dst"
     fi
     echo "$dst updated (vanilla OS installation file located at $og)"
 }
@@ -39,15 +51,19 @@ mkdir -p    /pf /lustre0 /lustre1 /lustre2 /opt/dm /dmOpt
 chmod 1777  /pf /lustre0 /lustre1 /lustre2 /opt/dm /dmOpt
 mount -t nfs -o ${LSCAT_NFS_OPTS},rw ldap1.ls-cat.net:/pf /pf
 
-mount -t lustre -o ${LUSTRE_OPTS},rw 10.1.0.13@tcp:/bdfs /lustre2
-mount -t lustre -o ${LUSTRE_OPTS},rw 10.1.0.11@tcp:/adfs /lustre1
-mount -t lustre -o ${LUSTRE_OPTS},ro 10.1.252.229@tcp:/sffs /lustre0
+mount -t lustre -o ${LSCAT_LUSTRE_OPTS},rw 10.1.0.13@tcp:/bdfs /lustre2
+mount -t lustre -o ${LSCAT_LUSTRE_OPTS},rw 10.1.0.11@tcp:/adfs /lustre1
+mount -t lustre -o ${LSCAT_LUSTRE_OPTS},ro 10.1.252.229@tcp:/sffs /lustre0
 
 mount -t nfs4 -o ${DM_NFS_OPTS},ro s21dserv.ls.aps.anl.gov:/export/dm  /opt/dm
 mount -t nfs4 -o ${DM_NFS_OPTS},ro catfiles.xray.aps.anl.gov:/dmOpt    /dmOpt
 
 cp -n /etc/fstab /etc/fstab.default
-cat <<EOF >> /etc/fstab
+grep -q "LS-CAT site-specific" /etc/fstab || cat <<EOF >> /etc/fstab
+
+#
+# LS-CAT site-specific mounts.
+#
 
 # Mount our NFS directory for general-purpose shared data where
 # home dirs also reside. The obtuse name "/pf" was chosen to
@@ -83,6 +99,7 @@ echo
 echo "Finished installing config files for LDAP-based user authentication."
 echo "Please run the following commands in order to allow this updated configuration to take effect:"
 echo
+echo "  systemctl daemon-reload"
 echo "  systemctl disable --now nslcd"
 echo "  systemctl restart sssd"
 echo "  sss_cache -E"
