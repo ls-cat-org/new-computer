@@ -45,7 +45,7 @@ cfg_install etc/pam.d/common-session 0644
 # Mount special LS-CAT and APS shared filesystems, update fstab if successful.
 LSCAT_NFS_OPTS='defaults,_netdev,nofail,noatime'
 LSCAT_LUSTRE_OPTS='noatime,checksum,flock,acl,lruresize,lazystatfs,nouser_fid2path,verbose,encrypt,statfs_project,_netdev,nofail,x-systemd.requires=lnet.service'
-DM_NFS_OPTS='relatime,vers=4.2,namlen=255,rsize=524288,wsize=524288,hard,fatal_neterrors=none,proto=tcp,timeo=600,retrans=2,sec=sys,local_lock=none,_netdev,nofail'
+DM_NFS_OPTS='relatime,vers=4.2,namlen=255,rsize=524288,wsize=524288,hard,proto=tcp,timeo=600,retrans=2,sec=sys,local_lock=none,_netdev,nofail'
 
 mkdir -p    /pf /lustre0 /lustre1 /lustre2 /opt/dm /dmOpt
 chmod 1777  /pf /lustre0 /lustre1 /lustre2 /opt/dm /dmOpt
