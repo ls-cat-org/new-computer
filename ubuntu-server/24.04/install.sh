@@ -4,6 +4,10 @@ if [ $UID -ne 0 ]; then
     exit 1
 fi
 
+# The local group name "staff" w/ GID 50 conflicts with the LDAP group
+# named "staff" w/ GID 9100.
+groupdel staff
+
 umount /pf      >/dev/null 2>&1
 umount /lustre2 >/dev/null 2>&1
 umount /lustre1 >/dev/null 2>&1
