@@ -6,7 +6,10 @@ fi
 
 # The local group name "staff" w/ GID 50 conflicts with the LDAP group
 # named "staff" w/ GID 9100.
-groupdel staff
+staff_gid=$(getent group staff | awk 'BEGIN{FS=":"} {print $3}')
+if [ -n "$staff_gid" ] && [ $staff_gid -eq 50 ]; then
+    groupdel staff
+fi
 
 umount /pf      >/dev/null 2>&1
 umount /lustre2 >/dev/null 2>&1
