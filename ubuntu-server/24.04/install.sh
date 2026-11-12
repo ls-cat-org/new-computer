@@ -50,15 +50,9 @@ cfg_install etc/pam.d/common-account 0644
 cfg_install etc/pam.d/common-session 0644
 
 # Mount special LS-CAT and APS shared filesystems, update fstab if successful.
-<<<<<<< HEAD
 LSCAT_NFS_OPTS='defaults,_netdev,x-systemd.mount-timeout=infinity,x-systemd.automount,noatime'
 LSCAT_LUSTRE_OPTS='defaults,_netdev,x-systemd.requires=lnet.service,x-systemd.mount-timeout=infinity,x-systemd.automount,checksum,lruresize,lazystatfs,nouser_fid2path,verbose,noatime'
 DM_NFS_OPTS='relatime,vers=4.2,namlen=255,rsize=524288,wsize=524288,hard,fatal_neterrors=none,proto=tcp,timeo=600,retrans=2,sec=sys,local_lock=none,x-systemd.mount-timeout=infinity,x-systemd.automount'
-=======
-LSCAT_NFS_OPTS='defaults,_netdev,nofail,noatime'
-LSCAT_LUSTRE_OPTS='noatime,checksum,flock,lruresize,lazystatfs,nouser_fid2path,verbose,_netdev,nofail,x-systemd.requires=lnet.service'
-DM_NFS_OPTS='relatime,vers=4.2,namlen=255,rsize=524288,wsize=524288,hard,proto=tcp,timeo=600,retrans=2,sec=sys,local_lock=none,_netdev,nofail'
->>>>>>> 021926c3aaf5d5a8df2f9225838c87cce98b2a0a
 
 mkdir -p    /pf /lustre0 /lustre1 /lustre2 /opt/dm /dmOpt
 chmod 1777  /pf /lustre0 /lustre1 /lustre2 /opt/dm /dmOpt
