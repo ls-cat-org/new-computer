@@ -4,6 +4,13 @@ if [ $UID -ne 0 ]; then
     exit 1
 fi
 
+# The local group name "staff" w/ GID 50 conflicts with the LDAP group
+# named "staff" w/ GID 9100.
+staff_gid=$(getent group staff | awk 'BEGIN{FS=":"} {print $3}')
+if [ -n "$staff_gid" ] && [ $staff_gid -eq 50 ]; then
+    groupdel staff
+fi
+
 umount /pf      >/dev/null 2>&1
 umount /lustre2 >/dev/null 2>&1
 umount /lustre1 >/dev/null 2>&1
@@ -43,9 +50,15 @@ cfg_install etc/pam.d/common-account 0644
 cfg_install etc/pam.d/common-session 0644
 
 # Mount special LS-CAT and APS shared filesystems, update fstab if successful.
+<<<<<<< HEAD
 LSCAT_NFS_OPTS='defaults,_netdev,x-systemd.mount-timeout=infinity,x-systemd.automount,noatime'
 LSCAT_LUSTRE_OPTS='defaults,_netdev,x-systemd.requires=lnet.service,x-systemd.mount-timeout=infinity,x-systemd.automount,checksum,lruresize,lazystatfs,nouser_fid2path,verbose,noatime'
 DM_NFS_OPTS='relatime,vers=4.2,namlen=255,rsize=524288,wsize=524288,hard,fatal_neterrors=none,proto=tcp,timeo=600,retrans=2,sec=sys,local_lock=none,x-systemd.mount-timeout=infinity,x-systemd.automount'
+=======
+LSCAT_NFS_OPTS='defaults,_netdev,nofail,noatime'
+LSCAT_LUSTRE_OPTS='noatime,checksum,flock,lruresize,lazystatfs,nouser_fid2path,verbose,_netdev,nofail,x-systemd.requires=lnet.service'
+DM_NFS_OPTS='relatime,vers=4.2,namlen=255,rsize=524288,wsize=524288,hard,proto=tcp,timeo=600,retrans=2,sec=sys,local_lock=none,_netdev,nofail'
+>>>>>>> 021926c3aaf5d5a8df2f9225838c87cce98b2a0a
 
 mkdir -p    /pf /lustre0 /lustre1 /lustre2 /opt/dm /dmOpt
 chmod 1777  /pf /lustre0 /lustre1 /lustre2 /opt/dm /dmOpt
@@ -63,6 +76,13 @@ grep -q "LS-CAT site-specific" /etc/fstab || cat <<EOF >> /etc/fstab
 # retain backward compatibility with long-standing hardcoded
 # EPICS scripts.
 ldap1.ls-cat.net:/pf /pf nfs ${LSCAT_NFS_OPTS},rw 0 0
+
+
+#
+# Mount the NFS directories
+#
+10.1.252.43:/eiger_temp  /eiger_temp_D  nfs4  rw,noatime,vers=4.2,hard,proto=tcp  0 0
+10.1.252.42:/eiger_temp  /eiger_temp_F  nfs4  rw,noatime,vers=4.2,hard,proto=tcp  0 0
 
 # Mount our two lustre filesystems.
 #
@@ -93,6 +113,7 @@ echo "Please run the following commands in order to allow this updated configura
 echo
 echo "  systemctl daemon-reload"
 echo "  systemctl disable --now nslcd"
+echo "  systemctl disable --now nscd"
 echo "  systemctl restart sssd"
 echo "  sss_cache -E"
 echo
