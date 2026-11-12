@@ -6,12 +6,7 @@ For the operating system you have installed on your machine, please complete the
 
 1. Configure your network interfaces and assign an internal network IP address to your machine.
 
-2. Install the lustre client.
-
-3. As root, generate an SSH key for github access by running "ssh-keygen" (no arguments, no password),
-   then add the public key to the list of deploy keys for this repository using the link below:
-   
-       https://github.com/ls-cat-org/new-computer/settings/keys
+2. Install the lustre client if you wish to mount LS-CAT's lustre filesystems.
 
 
 ## Usage
@@ -20,7 +15,7 @@ appropriate install.sh script in the corresponding subdir of this repository. Fo
 the install script for Ubuntu Server 24.04 is located under "ubuntu-server/24.04".
 To use it, the commands are:
 
-    git clone git@github.com:ls-cat-org/new-computer.git
+    git clone 'https://github.com/ls-cat-org/new-computer.git'
     cd ubuntu-server/24.04
     ./install.sh
     
